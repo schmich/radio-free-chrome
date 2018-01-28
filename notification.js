@@ -20,16 +20,24 @@ class Notification extends EventEmitter
       }
     };
 
+    const buttonClicked = (notificationId, buttonIndex) => {
+      if (this.id == notificationId) {
+        this.emit('button', buttonIndex);
+      }
+    };
+
     const closed = notificationId => {
       if (this.id == notificationId) {
         this.emit('close');
         this.removeAllListeners();
         chrome.notifications.onClicked.removeListener(clicked);
+        chrome.notifications.onButtonClicked.removeListener(buttonClicked);
         chrome.notifications.onClosed.removeListener(closed);
       }
     };
 
     chrome.notifications.onClicked.addListener(clicked);
+    chrome.notifications.onButtonClicked.addListener(buttonClicked);
     chrome.notifications.onClosed.addListener(closed);
   }
 

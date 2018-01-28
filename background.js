@@ -4,8 +4,13 @@
     - Visit current channel's page
     - Nested menu to choose any channel
   - For performance/recall, remember & store channel names after loading
-  - Chrome command to change stations, change volume
-  - Volume settings: player.getVolume, player.setVolume
+  - Chrome command to change volume
+  - Extension settings
+    - Volume
+    - Channel list
+    - Persisted channel titles (localStorage?)
+  - Use YouTube user avatars in notifications?
+  - Handle offline channels
   - Firefox support
 */
 
@@ -183,14 +188,16 @@ radio.on('state', async (state, player) => {
     iconUrl: '128.png',
     title: title,
     message: `by ${author}`,
-    isClickable: true
+    buttons: [{
+      title: 'Open Livestream',
+      iconUrl: 'youtube.png'
+    }]
   });
 
-  notification.on('click', () => {
+  notification.on('button', () => {
     notification.clear();
     radio.pause();
-    let url = player.getVideoUrl();
-    chrome.tabs.create({ url }, () => {});
+    chrome.tabs.create({ url: player.getVideoUrl() }, () => {});
   });
 });
 
