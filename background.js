@@ -37,8 +37,8 @@ class Radio extends EventEmitter
     this._setState(Radio.loading);
     this._autoPlay = true;
     if (this._player) {
-      this._player.seekTo(this._player.getDuration());
       this._player.playVideo();
+      this._player.seekTo(this._player.getDuration());
     }
   }
 
@@ -49,18 +49,45 @@ class Radio extends EventEmitter
     }
   }
 
+  get channel() {
+    return this._channel;
+  }
+
   set channel(channel) {
     if (channel == this._channel) {
       return;
     }
 
     this._channel = channel;
-    this.emit('channel', channel, this._player);
+    this.emit('channel', channel);
 
     this._tryCreatePlayer();
     if (this._player) {
       this._player.loadVideoById(channel);
     }
+  }
+
+  get url() {
+    if (!this._player) {
+      return null;
+    }
+    return this._player.getVideoUrl();
+  }
+
+  get title() {
+    if (!this._player) {
+      return null;
+    }
+    let { title } = this._player.getVideoData();
+    return title;
+  }
+
+  get user() {
+    if (!this._player) {
+      return null;
+    }
+    let { author } = this._player.getVideoData();
+    return author;
   }
 
   load() {
@@ -85,7 +112,7 @@ class Radio extends EventEmitter
     }
 
     this._state = state;
-    this.emit('state', state, this._player);
+    this.emit('state', state);
   }
 
   _tryCreatePlayer() {
@@ -174,20 +201,18 @@ radio.on('channel', () => {
   }
 });
 
-radio.on('state', async (state, player) => {
+radio.on('state', async state => {
   if (state !== Radio.playing || notified) {
     return;
   }
 
   notified = true;
 
-  let { title, author } = player.getVideoData();
-
   notification = await Notification.create({
     type: 'basic',
     iconUrl: '128.png',
-    title: title,
-    message: `by ${author}`,
+    title: radio.title,
+    message: `by ${radio.user}`,
     buttons: [{
       title: 'Open Livestream',
       iconUrl: 'youtube.png'
@@ -197,7 +222,7 @@ radio.on('state', async (state, player) => {
   notification.on('button', () => {
     notification.clear();
     radio.pause();
-    chrome.tabs.create({ url: player.getVideoUrl() }, () => {});
+    chrome.tabs.create({ url: radio.url }, () => {});
   });
 });
 
@@ -217,6 +242,15 @@ chrome.commands.onCommand.addListener(command => {
       break;
   }
 });
+
+chrome.contextMenus.create({
+  title: 'Open Livestream',
+  contexts: ['browser_action'],
+  onclick: () => {
+    radio.pause();
+    chrome.tabs.create({ url: radio.url }, () => {});
+  }
+}, () => {});
 
 function onYouTubeIframeAPIReady() {
   radio.load();
