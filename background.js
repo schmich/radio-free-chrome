@@ -132,7 +132,7 @@ radio.on('state', async (state, player) => {
 
   let notification = await Notification.create({
     type: 'basic',
-    iconUrl: 'full.png',
+    iconUrl: '128.png',
     title: title,
     message: `by ${author}`,
     isClickable: true
