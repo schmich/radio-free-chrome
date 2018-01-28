@@ -17,12 +17,15 @@ class Radio extends EventEmitter
 {
   constructor() {
     super();
-    this.player = null;
-    this.playing = false;
+    this._player = null;
+    this._autoPlay = false;
+    this._channel = null;
+    this._loaded = false;
+    this._setState(Radio.paused);
   }
 
   toggle() {
-    if (this.playing) {
+    if (this._autoPlay) {
       this.pause();
     } else {
       this.play();
@@ -30,31 +33,69 @@ class Radio extends EventEmitter
   }
 
   play() {
-    this.emit('state', Radio.loading, this.player);
-    this.playing = true;
-    if (this.player !== null) {
-      this.player.seekTo(this.player.getDuration());
-      this.player.playVideo();
+    this._setState(Radio.loading);
+    this._autoPlay = true;
+    if (this._player) {
+      this._player.seekTo(this._player.getDuration());
+      this._player.playVideo();
     }
   }
 
   pause() {
-    this.emit('state', Radio.paused, this.player);
-    this.playing = false;
-    if (this.player !== null) {
-      this.player.pauseVideo();
+    this._autoPlay = false;
+    if (this._player) {
+      this._player.pauseVideo();
+    }
+  }
+
+  set channel(channel) {
+    if (channel == this._channel) {
+      return;
+    }
+
+    this._channel = channel;
+    this.emit('channel', channel, this._player);
+
+    this._tryCreatePlayer();
+    if (this._player) {
+      this._player.loadVideoById(channel);
     }
   }
 
   load() {
+    if (this._loaded) {
+      return;
+    }
+
     let host = document.createElement('div');
     host.id = 'player';
     document.body.appendChild(host);
+    this._loaded = true;
+    this._tryCreatePlayer();
+  }
+
+  static get loading() { return 0; }
+  static get playing() { return 1; }
+  static get paused() { return 2; }
+
+  _setState(state) {
+    if (this._state === state) {
+      return;
+    }
+
+    this._state = state;
+    this.emit('state', state, this._player);
+  }
+
+  _tryCreatePlayer() {
+    if (!this._channel || !this._loaded) {
+      return;
+    }
 
     new YT.Player('player', {
       width: '200',
       height: '200',
-      videoId: 'AQBh9soLSkI',
+      videoId: this._channel,
       playerVars: {
         controls: 0,          // No video player control UI.
         fs: 0,                // No fullscreen button.
@@ -69,58 +110,58 @@ class Radio extends EventEmitter
           console.error(ev);
         },
         onReady: ev => {
-          this.player = ev.target;
-          this.player.setVolume(50);
-          if (this.playing) {
-            this.player.playVideo();
+          this._player = ev.target;
+          this._player.setVolume(50);
+          if (this._autoPlay) {
+            this._player.playVideo();
           }
         },
         onStateChange: ev => {
           let state = null;
-          switch (ev.target.getPlayerState()) {
+          switch (this._player.getPlayerState()) {
             case YT.PlayerState.UNSTARTED:
             case YT.PlayerState.BUFFERING:
-              state = Radio.loading;
+              this._setState(Radio.loading);
               break;
             case YT.PlayerState.PLAYING:
-              state = Radio.playing;
+              this._setState(Radio.playing);
               break;
             case YT.PlayerState.CUED:
             case YT.PlayerState.ENDED:
             case YT.PlayerState.PAUSED:
-              state = Radio.paused;
-              break;
             default:
-              state = Radio.paused;
+              this._setState(Radio.paused);
           }
-
-          this.emit('state', state, this.player);
         }
       }
     });
   }
-
-  static get loading() { return 0; }
-  static get playing() { return 1; }
-  static get paused() { return 2; }
 }
 
 let radio = new Radio();
+radio.channel = 'AQBh9soLSkI';
 
 radio.on('state', state => {
   let text = '';
+  let icon = 'action-disabled.png';
   let title = 'Radio Free Chrome';
   if (state === Radio.playing) {
-    text = '▶';
+    icon = 'action-enabled.png';
     title = 'Radio Free Chrome – Live Now';
   } else if (state === Radio.loading) {
     text = '...';
   }
+  chrome.browserAction.setIcon({ path: icon });
   chrome.browserAction.setBadgeText({ text });
   chrome.browserAction.setTitle({ title });
 });
 
 let notified = false;
+
+radio.on('channel', () => {
+  notified = false;
+});
+
 radio.on('state', async (state, player) => {
   if (state !== Radio.playing || notified) {
     return;

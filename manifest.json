@@ -23,7 +23,7 @@
   ],
   "browser_action": {
     "default_title": "Radio Free Chrome",
-    "default_icon": "browser-action.png"
+    "default_icon": "action-disabled.png"
   },
   "background": {
     "persistent": true,
