@@ -7,6 +7,7 @@
   - Desktop notification when station is changed
     - Button to visit video page: player.getVideoUrl
     - Title of stream: player.getVideoData
+  - Context menu entry to visit current livestream page
   - Chrome command to change stations, change volume
   - Volume settings: player.getVolume, player.setVolume
   - Firefox support
@@ -29,6 +30,7 @@ class Radio extends EventEmitter
   }
 
   play() {
+    this.emit('state', Radio.loading, this.player);
     this.playing = true;
     if (this.player !== null) {
       this.player.seekTo(this.player.getDuration());
@@ -37,6 +39,7 @@ class Radio extends EventEmitter
   }
 
   pause() {
+    this.emit('state', Radio.paused, this.player);
     this.playing = false;
     if (this.player !== null) {
       this.player.pauseVideo();
@@ -73,19 +76,33 @@ class Radio extends EventEmitter
           }
         },
         onStateChange: ev => {
-          const state = ev.target.getPlayerState();
-          this.emit('state', ev.target.getPlayerState(), this.player);
+          let state = null;
+          switch (ev.target.getPlayerState()) {
+            case YT.PlayerState.UNSTARTED:
+            case YT.PlayerState.BUFFERING:
+              state = Radio.loading;
+              break;
+            case YT.PlayerState.PLAYING:
+              state = Radio.playing;
+              break;
+            case YT.PlayerState.CUED:
+            case YT.PlayerState.ENDED:
+            case YT.PlayerState.PAUSED:
+              state = Radio.paused;
+              break;
+            default:
+              state = Radio.paused;
+          }
+
+          this.emit('state', state, this.player);
         }
       }
     });
   }
 
-  static get unstarted() { return YT.PlayerState.UNSTARTED; }
-  static get ended() { return YT.PlayerState.ENDED; }
-  static get playing() { return YT.PlayerState.PLAYING; }
-  static get paused() { return YT.PlayerState.PAUSED; }
-  static get buffering() { return YT.PlayerState.BUFFERING; }
-  static get cued() { return YT.PlayerState.CUED; }
+  static get loading() { return 0; }
+  static get playing() { return 1; }
+  static get paused() { return 2; }
 }
 
 let radio = new Radio();
@@ -96,7 +113,7 @@ radio.on('state', state => {
   if (state === Radio.playing) {
     text = '▶';
     title = 'Radio Free Chrome – Live Now';
-  } else if (state === Radio.buffering || state === Radio.unstarted) {
+  } else if (state === Radio.loading) {
     text = '...';
   }
   chrome.browserAction.setBadgeText({ text });
