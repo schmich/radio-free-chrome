@@ -1,10 +1,11 @@
 /*
   - Multiple stations
-  - Use YT JS API to play/pause instead of adding/removing iframe
+  - Use YT JS API to play/pause instead of adding/removing iframe: https://developers.google.com/youtube/iframe_api_reference
   - User-specified stations (Chrome storage)
   - Context menu: click to visit station's YouTube page
   - Custom live browser action icon (recording/live pip)
-  - Chrome command to play/pause
+  - Chrome command to change stations, change volume
+  - Volume settings
 */
 
 class Radio extends EventEmitter
@@ -35,3 +36,8 @@ radio.on('playing', playing => {
 });
 
 chrome.browserAction.onClicked.addListener(() => radio.toggle());
+chrome.commands.onCommand.addListener(command => {
+  if (command === 'toggle-radio') {
+    radio.toggle();
+  }
+});

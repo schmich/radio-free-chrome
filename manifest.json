@@ -7,6 +7,17 @@
   "author": "Chris Schmich <schmch@gmail.com>",
   "homepage_url": "https://github.com/schmich/radio-free-chrome",
   "offline_enabled": false,
+  "commands": {
+    "toggle-radio": {
+      "suggested_key": {
+        "default": "MediaPlayPause",
+        "windows": "MediaPlayPause",
+        "mac": "MediaPlayPause",
+        "linux": "MediaPlayPause"
+      },
+      "description": "Play or pause the radio"
+    }
+  },
   "permissions": [
   ],
   "browser_action": {
