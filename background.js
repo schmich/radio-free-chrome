@@ -17,17 +17,29 @@ class Radio extends EventEmitter
   constructor() {
     super();
     this.player = null;
-    this.play = false;
+    this.playing = false;
   }
 
   toggle() {
-    this.play = !this.play;
+    if (this.playing) {
+      this.pause();
+    } else {
+      this.play();
+    }
+  }
+
+  play() {
+    this.playing = true;
     if (this.player !== null) {
-      if (this.play) {
-        this.player.playVideo();
-      } else {
-        this.player.pauseVideo();
-      }
+      this.player.seekTo(this.player.getDuration());
+      this.player.playVideo();
+    }
+  }
+
+  pause() {
+    this.playing = false;
+    if (this.player !== null) {
+      this.player.pauseVideo();
     }
   }
 
@@ -56,13 +68,13 @@ class Radio extends EventEmitter
         onReady: ev => {
           this.player = ev.target;
           this.player.setVolume(50);
-          if (this.play) {
+          if (this.playing) {
             this.player.playVideo();
           }
         },
         onStateChange: ev => {
           const state = ev.target.getPlayerState();
-          this.emit('state', ev.target.getPlayerState());
+          this.emit('state', ev.target.getPlayerState(), this.player);
         }
       }
     });
@@ -89,6 +101,32 @@ radio.on('state', state => {
   }
   chrome.browserAction.setBadgeText({ text });
   chrome.browserAction.setTitle({ title });
+});
+
+let notified = false;
+radio.on('state', async (state, player) => {
+  if (state !== Radio.playing || notified) {
+    return;
+  }
+
+  notified = true;
+
+  let { title, author } = player.getVideoData();
+
+  let notification = await Notification.create({
+    type: 'basic',
+    iconUrl: 'full.png',
+    title: title,
+    message: `by ${author}`,
+    isClickable: true
+  });
+
+  notification.on('click', () => {
+    notification.clear();
+    radio.pause();
+    let url = player.getVideoUrl();
+    chrome.tabs.create({ url }, () => {});
+  });
 });
 
 chrome.browserAction.onClicked.addListener(() => radio.toggle());

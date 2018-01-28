@@ -19,15 +19,25 @@
     }
   },
   "permissions": [
+    "notifications"
   ],
   "browser_action": {
+    "default_title": "Radio Free Chrome",
+    "default_icon": "browser-action.png"
   },
   "background": {
     "persistent": true,
     "scripts": [
       "EventEmitter.min.js",
+      "async.js",
+      "notification.js",
       "background.js"
     ]
+  },
+  "icons": {
+    "16": "16.png",
+    "48": "48.png",
+    "128": "128.png"
   },
   "minimum_chrome_version": "55",
   "content_security_policy": "script-src 'self' https://www.youtube.com https://s.ytimg.com; object-src 'self'"
