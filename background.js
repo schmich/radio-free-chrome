@@ -1,13 +1,9 @@
 /*
-  - Multiple stations
-  - Use YT JS API to play/pause instead of adding/removing iframe: https://developers.google.com/youtube/iframe_api_reference
   - User-specified stations (Chrome storage)
-  - Context menu: click to visit station's YouTube page
-  - Custom live browser action icon (recording/live pip)
-  - Desktop notification when station is changed
-    - Button to visit video page: player.getVideoUrl
-    - Title of stream: player.getVideoData
-  - Context menu entry to visit current livestream page
+  - Context menu
+    - Visit current channel's page
+    - Nested menu to choose any channel
+  - For performance/recall, remember & store channel names after loading
   - Chrome command to change stations, change volume
   - Volume settings: player.getVolume, player.setVolume
   - Firefox support
@@ -88,7 +84,7 @@ class Radio extends EventEmitter
   }
 
   _tryCreatePlayer() {
-    if (!this._channel || !this._loaded) {
+    if (!this._channel || !this._loaded || this._player) {
       return;
     }
 
@@ -138,8 +134,15 @@ class Radio extends EventEmitter
   }
 }
 
+let channelIndex = 0;
+let channels = [
+  'AQBh9soLSkI', 'fxn8p26WTR4', '_43TGUnXCZs', 'SsYkibjW_gc', '6xGBpMYed-c',
+  '3KR2S3juSqU', 'VQ9i-V2i6W0', '2L9vFNMvIBE', '6rReMbO42uE', 'aKc5bBFNrD0',
+  'WlbpdNJwiKE', 'Nkz1ZdFKeMM', 'S3pofZsRbB8', '2atQnvunGCo', 'NofKmH-H76I'
+];
+
 let radio = new Radio();
-radio.channel = 'AQBh9soLSkI';
+radio.channel = channels[channelIndex];
 
 radio.on('state', state => {
   let text = '';
@@ -157,9 +160,13 @@ radio.on('state', state => {
 });
 
 let notified = false;
+let notification = null;
 
 radio.on('channel', () => {
   notified = false;
+  if (notification) {
+    notification.clear();
+  }
 });
 
 radio.on('state', async (state, player) => {
@@ -171,7 +178,7 @@ radio.on('state', async (state, player) => {
 
   let { title, author } = player.getVideoData();
 
-  let notification = await Notification.create({
+  notification = await Notification.create({
     type: 'basic',
     iconUrl: '128.png',
     title: title,
@@ -189,8 +196,18 @@ radio.on('state', async (state, player) => {
 
 chrome.browserAction.onClicked.addListener(() => radio.toggle());
 chrome.commands.onCommand.addListener(command => {
-  if (command === 'toggle-radio') {
-    radio.toggle();
+  switch (command) {
+    case 'radio:toggle':
+      radio.toggle();
+      break;
+    case 'radio:next':
+      channelIndex = (channelIndex + 1) % channels.length;
+      radio.channel = channels[channelIndex];
+      break;
+    case 'radio:prev':
+      channelIndex = (channelIndex + channels.length - 1) % channels.length;
+      radio.channel = channels[channelIndex];
+      break;
   }
 });
 

@@ -8,7 +8,7 @@
   "homepage_url": "https://github.com/schmich/radio-free-chrome",
   "offline_enabled": false,
   "commands": {
-    "toggle-radio": {
+    "radio:toggle": {
       "suggested_key": {
         "default": "MediaPlayPause",
         "windows": "MediaPlayPause",
@@ -16,6 +16,24 @@
         "linux": "MediaPlayPause"
       },
       "description": "Play or pause the radio"
+    },
+    "radio:next": {
+      "suggested_key": {
+        "default": "MediaNextTrack",
+        "windows": "MediaNextTrack",
+        "mac": "MediaNextTrack",
+        "linux": "MediaNextTrack"
+      },
+      "description": "Next channel"
+    },
+    "radio:prev": {
+      "suggested_key": {
+        "default": "MediaPrevTrack",
+        "windows": "MediaPrevTrack",
+        "mac": "MediaPrevTrack",
+        "linux": "MediaPrevTrack"
+      },
+      "description": "Previous channel"
     }
   },
   "permissions": [
