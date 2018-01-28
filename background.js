@@ -11,6 +11,8 @@
     - Persisted channel titles (localStorage?)
   - Use YouTube user avatars in notifications?
   - Handle offline channels
+  - On resume, find better method to catch up to livestream
+  - Move source into src, images into src/images
   - Firefox support
 */
 
@@ -197,6 +199,12 @@ let notification = null;
 radio.on('channel', () => {
   notified = false;
   if (notification) {
+    notification.clear();
+  }
+});
+
+radio.on('state', state => {
+  if (state === Radio.paused && notification) {
     notification.clear();
   }
 });
