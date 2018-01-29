@@ -11,7 +11,6 @@
     - Persisted channel titles (localStorage?)
   - Use YouTube user avatars in notifications?
   - Handle offline channels
-  - On resume, find better method to catch up to livestream
   - Move source into src, images into src/images
   - Firefox support
 */
@@ -28,10 +27,10 @@ class Radio extends EventEmitter
   }
 
   toggle() {
-    if (this._autoPlay) {
-      this.pause();
-    } else {
+    if (this._state === Radio.paused) {
       this.play();
+    } else {
+      this.pause();
     }
   }
 
@@ -39,15 +38,14 @@ class Radio extends EventEmitter
     this._setState(Radio.loading);
     this._autoPlay = true;
     if (this._player) {
-      this._player.playVideo();
-      this._player.seekTo(this._player.getDuration());
+      this._player.seekTo(Infinity, true);
     }
   }
 
   pause() {
     this._autoPlay = false;
     if (this._player) {
-      this._player.pauseVideo();
+      this._player.stopVideo();
     }
   }
 
@@ -136,35 +134,37 @@ class Radio extends EventEmitter
         cc_load_policy: 0     // Do not load captions.
       },
       events: {
-        onError: ev => {
-          console.error(ev);
-        },
-        onReady: ev => {
-          this._player = ev.target;
-          this._player.setVolume(50);
-          if (this._autoPlay) {
-            this._player.playVideo();
-          }
-        },
-        onStateChange: ev => {
-          let state = null;
-          switch (this._player.getPlayerState()) {
-            case YT.PlayerState.UNSTARTED:
-            case YT.PlayerState.BUFFERING:
-              this._setState(Radio.loading);
-              break;
-            case YT.PlayerState.PLAYING:
-              this._setState(Radio.playing);
-              break;
-            case YT.PlayerState.CUED:
-            case YT.PlayerState.ENDED:
-            case YT.PlayerState.PAUSED:
-            default:
-              this._setState(Radio.paused);
-          }
-        }
+        onError: ev => console.error(ev),
+        onReady: ev => this._onReady(ev.target),
+        onStateChange: ev => this._onStateChange()
       }
     });
+  }
+
+  _onReady(player) {
+    this._player = player;
+    this._player.setVolume(50);
+    if (this._autoPlay) {
+      this._player.playVideo();
+    }
+  }
+
+  _onStateChange() {
+    let state = this._player.getPlayerState();
+    switch (state) {
+      case YT.PlayerState.UNSTARTED:
+      case YT.PlayerState.BUFFERING:
+        this._setState(Radio.loading);
+        break;
+      case YT.PlayerState.PLAYING:
+        this._setState(Radio.playing);
+        break;
+      case YT.PlayerState.CUED:
+      case YT.PlayerState.ENDED:
+      case YT.PlayerState.PAUSED:
+      default:
+        this._setState(Radio.paused);
+    }
   }
 }
 
