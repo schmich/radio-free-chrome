@@ -170,9 +170,15 @@ class Radio extends EventEmitter
 
 let channelIndex = 0;
 let channels = [
-  'AQBh9soLSkI', 'fxn8p26WTR4', '_43TGUnXCZs', 'SsYkibjW_gc', '6xGBpMYed-c',
-  '3KR2S3juSqU', 'VQ9i-V2i6W0', '2L9vFNMvIBE', '6rReMbO42uE', 'aKc5bBFNrD0',
-  'WlbpdNJwiKE', 'Nkz1ZdFKeMM', 'S3pofZsRbB8', '2atQnvunGCo', 'NofKmH-H76I'
+  'fxn8p26WTR4', '_43TGUnXCZs', 'SsYkibjW_gc', '6xGBpMYed-c',
+  '3KR2S3juSqU', 'VQ9i-V2i6W0', '2L9vFNMvIBE', '6rReMbO42uE',
+  'aKc5bBFNrD0', 'WlbpdNJwiKE', 'Nkz1ZdFKeMM', 'S3pofZsRbB8',
+  '2atQnvunGCo', 'NofKmH-H76I', 'p21RWJYGbPU', 'WfVraXyyjZU',
+  '3ksvZx4BgD0', 'tzKdhbiTaoA', 'kCziHoCBrug', 'ueupsBPNkSc',
+  '0kG8XbRkp1I', 'iTnoKgOk1wo', '8f3tfSSiIWk', 'NuIAYHVeFYs',
+  '2ccaHpy5Ewo', 'Wxu9yDI7a6k', 'o35TFk-IULM', 'hUjRuVhJ_4o',
+  'z6NUZMeeCdM', 'xcoac7I-J8M', 'K6IXPdMAVfM', 'gmv54pfxk0Q',
+  'zr1bVgZ_IY0', 'AQBh9soLSkI'
 ];
 
 let radio = new Radio();
