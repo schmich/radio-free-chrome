@@ -3,17 +3,38 @@
   - Context menu
     - Visit current channel's page
     - Nested menu to choose any channel
-  - For performance/recall, remember & store channel names after loading
+  - For performance/recall, remember & store channel titles after loading
   - Chrome command to change volume
   - Extension settings
     - Volume
-    - Channel list
+    - Channel list (order, existence)
+    - Last played channel
     - Persisted channel titles (localStorage?)
+  - Browser action should be a small popup window
+    - Radio controls: play/pause, next/prev, volume
+    - Channel list with titles
+    - Link to settings
   - Use YouTube user avatars in notifications?
   - Handle offline channels
+  - Handle onError errors:
+    - 2: Invalid video ID
+    - 5: Error in HTML5 player
+    - 100: Video not found
+    - 101: Video does not allow embedded players
+      e.g. see _43TGUnXCZs
+    - 150: Same as 101
   - Move source into src, images into src/images
   - Firefox support
 */
+
+class RadioError
+{
+  static get invalidParameter() { return 1; }
+  static get playerError() { return 2; }
+  static get notFound() { return 3; }
+  static get cannotEmbed() { return 4; }
+  static get unknown() { return 5; }
+}
 
 class Radio extends EventEmitter
 {
@@ -134,11 +155,23 @@ class Radio extends EventEmitter
         cc_load_policy: 0     // Do not load captions.
       },
       events: {
-        onError: ev => console.error(ev),
+        onError: ev => this._onError(ev),
         onReady: ev => this._onReady(ev.target),
         onStateChange: ev => this._onStateChange()
       }
     });
+  }
+
+  _onError(ev) {
+    console.error('Player error', ev);
+    const error = ({
+      2: RadioError.invalidParameter,
+      5: RadioError.playerError,
+      100: RadioError.notFound,
+      101: RadioError.cannotEmbed,
+      150: RadioError.cannotEmbed
+    })[ev.data] || RadioError.unknown;
+    this.emit('error', error);
   }
 
   _onReady(player) {
@@ -202,6 +235,12 @@ radio.on('state', state => {
 let notified = false;
 let notification = null;
 let notificationTimeout = null;
+
+radio.on('error', error => {
+  // TODO: Notify user of channel error.
+  channelIndex = (channelIndex + 1) % channels.length;
+  radio.channel = channels[channelIndex];
+});
 
 radio.on('channel', () => {
   notified = false;
