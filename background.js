@@ -27,28 +27,40 @@
   - Firefox support
 */
 
-class RadioError
+class PlayerError
 {
   static get invalidParameter() { return 1; }
-  static get playerError() { return 2; }
+  static get internal() { return 2; }
   static get notFound() { return 3; }
   static get cannotEmbed() { return 4; }
   static get unknown() { return 5; }
 }
 
-class Radio extends EventEmitter
+class PlayState
+{
+  static get loading() { return 0; }
+  static get playing() { return 1; }
+  static get paused() { return 2; }
+}
+
+class Player extends EventEmitter
 {
   constructor() {
     super();
     this._player = null;
     this._autoPlay = false;
-    this._channel = null;
+    this._videoId = null;
     this._loaded = false;
-    this._setState(Radio.paused);
+    this._setState(PlayState.paused);
+
+    window.onYouTubeIframeAPIReady = () => this._load();
+    let script = window.document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
+    window.document.body.appendChild(script);
   }
 
   toggle() {
-    if (this._state === Radio.paused) {
+    if (this._state === PlayState.paused) {
       this.play();
     } else {
       this.pause();
@@ -56,7 +68,7 @@ class Radio extends EventEmitter
   }
 
   play() {
-    this._setState(Radio.loading);
+    this._setState(PlayState.loading);
     this._autoPlay = true;
     if (this._player) {
       this._player.seekTo(Infinity, true);
@@ -70,21 +82,20 @@ class Radio extends EventEmitter
     }
   }
 
-  get channel() {
-    return this._channel;
+  get videoId() {
+    return this._videoId;
   }
 
-  set channel(channel) {
-    if (channel == this._channel) {
+  set videoId(videoId) {
+    if (videoId == this._videoId) {
       return;
     }
 
-    this._channel = channel;
-    this.emit('channel', channel);
+    this._videoId = videoId;
 
     this._tryCreatePlayer();
     if (this._player) {
-      this._player.loadVideoById(channel);
+      this._player.loadVideoById(videoId);
     }
   }
 
@@ -111,7 +122,7 @@ class Radio extends EventEmitter
     return author;
   }
 
-  load() {
+  _load() {
     if (this._loaded) {
       return;
     }
@@ -123,10 +134,6 @@ class Radio extends EventEmitter
     this._tryCreatePlayer();
   }
 
-  static get loading() { return 0; }
-  static get playing() { return 1; }
-  static get paused() { return 2; }
-
   _setState(state) {
     if (this._state === state) {
       return;
@@ -137,14 +144,14 @@ class Radio extends EventEmitter
   }
 
   _tryCreatePlayer() {
-    if (!this._channel || !this._loaded || this._player) {
+    if (!this._videoId || !this._loaded || this._player) {
       return;
     }
 
     new YT.Player('player', {
       width: '200',
       height: '200',
-      videoId: this._channel,
+      videoId: this._videoId,
       playerVars: {
         controls: 0,          // No video player control UI.
         fs: 0,                // No fullscreen button.
@@ -165,12 +172,12 @@ class Radio extends EventEmitter
   _onError(ev) {
     console.error('Player error', ev);
     const error = ({
-      2: RadioError.invalidParameter,
-      5: RadioError.playerError,
-      100: RadioError.notFound,
-      101: RadioError.cannotEmbed,
-      150: RadioError.cannotEmbed
-    })[ev.data] || RadioError.unknown;
+      2: PlayerError.invalidParameter,
+      5: PlayerError.internal,
+      100: PlayerError.notFound,
+      101: PlayerError.cannotEmbed,
+      150: PlayerError.cannotEmbed
+    })[ev.data] || PlayerError.unknown;
     this.emit('error', error);
   }
 
@@ -187,21 +194,83 @@ class Radio extends EventEmitter
     switch (state) {
       case YT.PlayerState.UNSTARTED:
       case YT.PlayerState.BUFFERING:
-        this._setState(Radio.loading);
+        this._setState(PlayState.loading);
         break;
       case YT.PlayerState.PLAYING:
-        this._setState(Radio.playing);
+        this._setState(PlayState.playing);
         break;
       case YT.PlayerState.CUED:
       case YT.PlayerState.ENDED:
       case YT.PlayerState.PAUSED:
       default:
-        this._setState(Radio.paused);
+        this._setState(PlayState.paused);
     }
   }
 }
 
-let channelIndex = 0;
+class Radio extends EventEmitter
+{
+  constructor(channels) {
+    super();
+
+    this.player = new Player();
+    this.player.on('state', (...args) => this.emit('state', ...args));
+    this.player.on('channel', (...args) => this.emit('channel', ...args));
+    this.player.on('error', (...args) => this.emit('error', ...args));
+
+    this.channels = channels;
+    this.channelIndex = 0;
+    this.player.videoId = this.channels[0];
+  }
+
+  nextChannel() {
+    this.channelIndex = (this.channelIndex + 1) % this.channels.length;
+    let channel = this.channels[this.channelIndex];
+    this.player.videoId = channel;
+    this.emit('channel', channel);
+  }
+
+  previousChannel() {
+    this.channelIndex = (this.channelIndex + channels.length - 1) % channels.length;
+    let channel = this.channels[this.channelIndex];
+    this.player.videoId = channel;
+    this.emit('channel', channel);
+  }
+
+  toggle() {
+    this.player.toggle();
+  }
+
+  play() {
+    this.player.play();
+  }
+
+  pause() {
+    this.player.pause();
+  }
+
+  get channel() {
+    return this.player.videoId;
+  }
+
+  set channel(channel) {
+    this.player.videoId = channel;
+    this.emit('channel', channel);
+  }
+
+  get url() {
+    return this.player.url;
+  }
+
+  get title() {
+    return this.player.title;
+  }
+
+  get user() {
+    return this.player.user;
+  }
+}
+
 let channels = [
   'fxn8p26WTR4', '_43TGUnXCZs', 'SsYkibjW_gc', '6xGBpMYed-c',
   '3KR2S3juSqU', 'VQ9i-V2i6W0', '2L9vFNMvIBE', '6rReMbO42uE',
@@ -214,17 +283,21 @@ let channels = [
   'zr1bVgZ_IY0', 'AQBh9soLSkI'
 ];
 
-let radio = new Radio();
-radio.channel = channels[channelIndex];
+let radio = new Radio(channels);
+
+function openLivestream() {
+  chrome.tabs.create({ url: radio.url }, () => {});
+  radio.pause();
+}
 
 radio.on('state', state => {
   let text = '';
   let icon = 'action-disabled.png';
   let title = 'Radio Free Chrome';
-  if (state === Radio.playing) {
+  if (state === PlayState.playing) {
     icon = 'action-enabled.png';
     title = 'Radio Free Chrome – Live Now';
-  } else if (state === Radio.loading) {
+  } else if (state === PlayState.loading) {
     text = '...';
   }
   chrome.browserAction.setIcon({ path: icon });
@@ -232,18 +305,18 @@ radio.on('state', state => {
   chrome.browserAction.setTitle({ title });
 });
 
-let notified = false;
+let notify = true;
 let notification = null;
 let notificationTimeout = null;
 
 radio.on('error', error => {
   // TODO: Notify user of channel error.
-  channelIndex = (channelIndex + 1) % channels.length;
-  radio.channel = channels[channelIndex];
+  // TODO: nextChannel is not always correct, sometimes need to go previousChannel. Move into Radio?
+  radio.nextChannel();
 });
 
 radio.on('channel', () => {
-  notified = false;
+  notify = true;
 
   if (notification) {
     notification.clear();
@@ -255,23 +328,23 @@ radio.on('channel', () => {
 });
 
 radio.on('state', state => {
-  if (state === Radio.paused && notification) {
+  if (state === PlayState.paused && notification) {
     notification.clear();
   }
 });
 
 radio.on('state', async state => {
-  if (state !== Radio.playing || notified) {
+  if (state !== PlayState.playing || !notify) {
     return;
   }
 
-  notified = true;
+  notify = false;
 
   if (notificationTimeout) {
     clearTimeout(notificationTimeout);
   }
 
-  notificationTimeout = setTimeout(() => { notified = false; }, 60 * 1000);
+  notificationTimeout = setTimeout(() => { notify = true; }, 60 * 1000);
 
   notification = await Notification.create({
     type: 'basic',
@@ -286,8 +359,7 @@ radio.on('state', async state => {
 
   notification.on('button', () => {
     notification.clear();
-    radio.pause();
-    chrome.tabs.create({ url: radio.url }, () => {});
+    openLivestream();
   });
 });
 
@@ -298,12 +370,10 @@ chrome.commands.onCommand.addListener(command => {
       radio.toggle();
       break;
     case 'radio:next':
-      channelIndex = (channelIndex + 1) % channels.length;
-      radio.channel = channels[channelIndex];
+      radio.nextChannel();
       break;
     case 'radio:prev':
-      channelIndex = (channelIndex + channels.length - 1) % channels.length;
-      radio.channel = channels[channelIndex];
+      radio.previousChannel();
       break;
   }
 });
@@ -311,16 +381,5 @@ chrome.commands.onCommand.addListener(command => {
 chrome.contextMenus.create({
   title: 'Open Livestream',
   contexts: ['browser_action'],
-  onclick: () => {
-    radio.pause();
-    chrome.tabs.create({ url: radio.url }, () => {});
-  }
+  onclick: openLivestream
 }, () => {});
-
-function onYouTubeIframeAPIReady() {
-  radio.load();
-}
-
-let script = document.createElement('script');
-script.src = 'https://www.youtube.com/iframe_api';
-document.body.appendChild(script);
