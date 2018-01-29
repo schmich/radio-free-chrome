@@ -201,11 +201,17 @@ radio.on('state', state => {
 
 let notified = false;
 let notification = null;
+let notificationTimeout = null;
 
 radio.on('channel', () => {
   notified = false;
+
   if (notification) {
     notification.clear();
+  }
+
+  if (notificationTimeout) {
+    clearTimeout(notificationTimeout);
   }
 });
 
@@ -221,6 +227,12 @@ radio.on('state', async state => {
   }
 
   notified = true;
+
+  if (notificationTimeout) {
+    clearTimeout(notificationTimeout);
+  }
+
+  notificationTimeout = setTimeout(() => { notified = false; }, 60 * 1000);
 
   notification = await Notification.create({
     type: 'basic',
